@@ -4,10 +4,13 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/smtp"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // A Dialer is a dialer to an SMTP server.
@@ -128,7 +131,13 @@ func (d *Dialer) Dial() (SendCloser, error) {
 		}
 	}
 
-	return &smtpSender{c, conn, d}, nil
+	sender := &smtpSender{c, conn, d, false}
+	if err := c.Noop(); err == nil {
+		sender.hasNOOP = true
+	} else {
+		log.Print("warning: NOOP unsuppoerted")
+	}
+	return sender, nil
 }
 
 func (d *Dialer) tlsConfig() *tls.Config {
@@ -156,8 +165,9 @@ func (d *Dialer) DialAndSend(m ...*Message) error {
 
 type smtpSender struct {
 	smtpClient
-	conn net.Conn
-	d    *Dialer
+	conn    net.Conn
+	d       *Dialer
+	hasNOOP bool
 }
 
 func (c *smtpSender) retryError(err error) bool {
@@ -175,6 +185,24 @@ func (c *smtpSender) retryError(err error) bool {
 func (c *smtpSender) Send(from string, to []string, msg io.WriterTo) error {
 	if c.d.Timeout > 0 {
 		c.conn.SetDeadline(time.Now().Add(c.d.Timeout))
+	}
+
+	if err := c.Noop(); c.hasNOOP && err != nil {
+		var worked bool
+		var err error
+		for i := 0; i < 10; i++ {
+			log.Println("TODO: actually use new connection...!")
+			_, err = c.d.Dial()
+			if err != nil {
+				err = errors.Wrapf(err, "gomail: failed to re-dial(%d) server", i)
+				log.Println(err)
+			} else {
+				worked = true
+			}
+		}
+		if !worked {
+			return err
+		}
 	}
 
 	if err := c.Mail(from); err != nil {
@@ -229,6 +257,7 @@ type smtpClient interface {
 	StartTLS(*tls.Config) error
 	Auth(smtp.Auth) error
 	Mail(string) error
+	Noop() error
 	Rcpt(string) error
 	Data() (io.WriteCloser, error)
 	Quit() error

@@ -30,6 +30,8 @@ func TestDialer(t *testing.T) {
 		"StartTLS",
 		"Extension AUTH",
 		"Auth",
+		"NOOP",
+		"NOOP",
 		"Mail " + testFrom,
 		"Rcpt " + testTo1,
 		"Rcpt " + testTo2,
@@ -46,6 +48,8 @@ func TestDialerSSL(t *testing.T) {
 	testSendMail(t, d, []string{
 		"Extension AUTH",
 		"Auth",
+		"NOOP",
+		"NOOP",
 		"Mail " + testFrom,
 		"Rcpt " + testTo1,
 		"Rcpt " + testTo2,
@@ -67,6 +71,8 @@ func TestDialerConfig(t *testing.T) {
 		"StartTLS",
 		"Extension AUTH",
 		"Auth",
+		"NOOP",
+		"NOOP",
 		"Mail " + testFrom,
 		"Rcpt " + testTo1,
 		"Rcpt " + testTo2,
@@ -86,6 +92,8 @@ func TestDialerSSLConfig(t *testing.T) {
 		"Hello test",
 		"Extension AUTH",
 		"Auth",
+		"NOOP",
+		"NOOP",
 		"Mail " + testFrom,
 		"Rcpt " + testTo1,
 		"Rcpt " + testTo2,
@@ -105,6 +113,8 @@ func TestDialerNoAuth(t *testing.T) {
 	testSendMail(t, d, []string{
 		"Extension STARTTLS",
 		"StartTLS",
+		"NOOP",
+		"NOOP",
 		"Mail " + testFrom,
 		"Rcpt " + testTo1,
 		"Rcpt " + testTo2,
@@ -125,9 +135,13 @@ func TestDialerTimeout(t *testing.T) {
 	testSendMailTimeout(t, d, []string{
 		"Extension STARTTLS",
 		"StartTLS",
+		"NOOP",
+		"NOOP",
 		"Mail " + testFrom,
 		"Extension STARTTLS",
 		"StartTLS",
+		"NOOP",
+		"NOOP",
 		"Mail " + testFrom,
 		"Rcpt " + testTo1,
 		"Rcpt " + testTo2,
@@ -149,6 +163,8 @@ func TestDialerTimeoutNoRetry(t *testing.T) {
 	err := doTestSendMail(t, d, []string{
 		"Extension STARTTLS",
 		"StartTLS",
+		"NOOP",
+		"NOOP",
 		"Mail " + testFrom,
 		"Quit",
 	}, true)
@@ -175,6 +191,11 @@ func (c *mockClient) Hello(localName string) error {
 func (c *mockClient) Extension(ext string) (bool, string) {
 	c.do("Extension " + ext)
 	return true, ""
+}
+
+func (c *mockClient) Noop() error {
+	c.do("NOOP")
+	return nil
 }
 
 func (c *mockClient) StartTLS(config *tls.Config) error {
